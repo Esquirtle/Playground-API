@@ -51,7 +51,7 @@ public class MessageService {
         }
 
         if (recipientIsPhone) {
-            String recipientConversationId = upsertConversationSummary(recipientNumber, senderNumber, sentAt, body, senderIsPhone ? 1 : 0);
+            String recipientConversationId = upsertConversationSummary(recipientNumber, senderNumber, sentAt, body, 1);
             MessageEntity recipientCopy = new MessageEntity(UUID.randomUUID().toString(), recipientConversationId, senderNumber, recipientNumber, body, sentAt, false, System.currentTimeMillis());
             lastSavedMessage = messageRepository.save(recipientCopy);
         }
