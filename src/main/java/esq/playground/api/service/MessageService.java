@@ -1,16 +1,17 @@
 package esq.playground.api.service;
 
-import esq.playground.api.model.ConversationSummary;
-import esq.playground.api.model.MessageEntity;
-import esq.playground.api.repository.ConversationRepository;
-import esq.playground.api.repository.MessageRepository;
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.UUID;
+import esq.playground.api.model.ConversationSummary;
+import esq.playground.api.model.MessageEntity;
+import esq.playground.api.repository.ConversationRepository;
+import esq.playground.api.repository.MessageRepository;
 
 @Service
 public class MessageService {
