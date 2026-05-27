@@ -1,22 +1,18 @@
 package esq.playground.api.service;
 
-import java.util.UUID;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
-
 import esq.playground.api.model.ConversationSummary;
 import esq.playground.api.model.MessageEntity;
 import esq.playground.api.repository.ConversationRepository;
 import esq.playground.api.repository.MessageRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class MessageService {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(MessageService.class);
 
     private final PhoneService phoneService;
     private final ConversationRepository conversationRepository;
@@ -30,8 +26,6 @@ public class MessageService {
 
     @Transactional
     public MessageEntity saveMessage(String senderNumber, String recipientNumber, String body, long sentAt) {
-        LOGGER.info("saveMessage request sender={} recipient={} sentAt={} bodyLength={}", senderNumber, recipientNumber, sentAt, body != null ? body.length() : 0);
-
         if (!StringUtils.hasText(senderNumber) || !StringUtils.hasText(recipientNumber)) {
             throw new IllegalArgumentException("senderNumber and recipientNumber are required");
         }
@@ -54,17 +48,14 @@ public class MessageService {
             String senderConversationId = upsertConversationSummary(senderNumber, recipientNumber, sentAt, body, 0);
             MessageEntity senderCopy = new MessageEntity(UUID.randomUUID().toString(), senderConversationId, senderNumber, recipientNumber, body, sentAt, true, System.currentTimeMillis());
             lastSavedMessage = messageRepository.save(senderCopy);
-            LOGGER.debug("Saved sender copy id={} conversationId={} for {}", senderCopy.messageId(), senderConversationId, senderNumber);
         }
 
         if (recipientIsPhone) {
-            String recipientConversationId = upsertConversationSummary(recipientNumber, senderNumber, sentAt, body, senderIsPhone ? 1 : 0);
+            String recipientConversationId = upsertConversationSummary(recipientNumber, senderNumber, sentAt, body, 1);
             MessageEntity recipientCopy = new MessageEntity(UUID.randomUUID().toString(), recipientConversationId, senderNumber, recipientNumber, body, sentAt, false, System.currentTimeMillis());
             lastSavedMessage = messageRepository.save(recipientCopy);
-            LOGGER.debug("Saved recipient copy id={} conversationId={} for {}", recipientCopy.messageId(), recipientConversationId, recipientNumber);
         }
 
-        LOGGER.info("saveMessage completed senderIsPhone={} recipientIsPhone={} returnedMessageId={}", senderIsPhone, recipientIsPhone, lastSavedMessage != null ? lastSavedMessage.messageId() : "null");
         return lastSavedMessage;
     }
 
