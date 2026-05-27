@@ -38,30 +38,32 @@ public class MessageService {
         boolean senderIsPhone = phoneService.exists(senderNumber);
         boolean recipientIsPhone = phoneService.exists(recipientNumber);
 
-        String phoneNumber;
-        String contactNumber;
-        boolean isSenderCopy;
-        if (senderIsPhone) {
-            phoneNumber = senderNumber;
-            contactNumber = recipientNumber;
-            isSenderCopy = true;
-        } else if (recipientIsPhone) {
-            phoneNumber = recipientNumber;
-            contactNumber = senderNumber;
-            isSenderCopy = false;
-        } else {
+        if (!senderIsPhone && !recipientIsPhone) {
             throw new IllegalArgumentException("Neither senderNumber nor recipientNumber is a registered phone");
         }
 
-        Optional<ConversationSummary> existingConversation = conversationRepository.findByPhoneAndContact(phoneNumber, contactNumber);
-        String conversationId = existingConversation.map(ConversationSummary::conversationId).orElseGet(() -> UUID.randomUUID().toString());
-        int unreadCount = existingConversation.map(ConversationSummary::unreadCount).orElse(0);
-        if (!isSenderCopy) {
-            unreadCount++;
-        }
-        conversationRepository.saveOrUpdateSummary(conversationId, phoneNumber, contactNumber, sentAt, body, unreadCount);
+        MessageEntity lastSavedMessage = null;
 
-        MessageEntity message = new MessageEntity(UUID.randomUUID().toString(), conversationId, senderNumber, recipientNumber, body, sentAt, isSenderCopy, System.currentTimeMillis());
-        return messageRepository.save(message);
+        if (senderIsPhone) {
+            String senderConversationId = upsertConversationSummary(senderNumber, recipientNumber, sentAt, body, 0);
+            MessageEntity senderCopy = new MessageEntity(UUID.randomUUID().toString(), senderConversationId, senderNumber, recipientNumber, body, sentAt, true, System.currentTimeMillis());
+            lastSavedMessage = messageRepository.save(senderCopy);
+        }
+
+        if (recipientIsPhone) {
+            String recipientConversationId = upsertConversationSummary(recipientNumber, senderNumber, sentAt, body, senderIsPhone ? 1 : 0);
+            MessageEntity recipientCopy = new MessageEntity(UUID.randomUUID().toString(), recipientConversationId, senderNumber, recipientNumber, body, sentAt, false, System.currentTimeMillis());
+            lastSavedMessage = messageRepository.save(recipientCopy);
+        }
+
+        return lastSavedMessage;
+    }
+
+    private String upsertConversationSummary(String phoneNumber, String contactNumber, long sentAt, String body, int unreadDelta) {
+        var existingConversation = conversationRepository.findByPhoneAndContact(phoneNumber, contactNumber);
+        String conversationId = existingConversation.map(ConversationSummary::conversationId).orElseGet(() -> UUID.randomUUID().toString());
+        int unreadCount = existingConversation.map(ConversationSummary::unreadCount).orElse(0) + unreadDelta;
+        conversationRepository.saveOrUpdateSummary(conversationId, phoneNumber, contactNumber, sentAt, body, unreadCount);
+        return conversationId;
     }
 }
